@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Create Blueprint Studio</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;background:#0e1925;color:#edf5fb;overflow:hidden}
+:root{--bg:#101d2b;--panel:#17283a;--panel2:#1c3044;--line:#34516b;--blue:#42a5e9;--text:#eaf4fb;--muted:#9fb4c5;--danger:#dc5b62}
+button,input,select{font:inherit}
+#app{height:100vh;display:grid;grid-template-rows:64px 1fr}
+header{display:flex;align-items:center;gap:12px;padding:0 20px;background:#111f2e;border-bottom:1px solid #304c66}
+.logo{font-weight:850;font-size:20px;letter-spacing:.5px;margin-right:14px}.logo b{color:#58b7f4}
+button{border:1px solid #36546e;background:#1c3145;color:#edf5fb;border-radius:10px;padding:10px 15px;cursor:pointer;transition:.15s}
+button:hover{background:#28445d;transform:translateY(-1px)}button.primary{background:#2387c8;border-color:#42a5e9}.danger{background:#55262e;border-color:#9d414c}.danger:hover{background:#71313c}
+#layout{min-height:0;display:grid;grid-template-columns:410px 1fr}
+aside{min-width:0;background:#142537;border-right:1px solid #36526b;display:flex;flex-direction:column}
+.section{padding:16px 18px;border-bottom:1px solid #29445d}.section h2{font-size:14px;text-transform:uppercase;letter-spacing:1.5px;color:#a9c8dd;margin:0 0 12px}
+.scheme-actions,.export{display:flex;gap:8px;flex-wrap:wrap}
+#schemes{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.scheme{padding:9px 12px;border-radius:8px;background:#20364a;border:1px solid #385670;white-space:nowrap}.scheme.active{background:#2589c9;border-color:#62baf1}
+.catalog{flex:1;min-height:0;display:flex;flex-direction:column}
+.tabs{display:flex;gap:6px;margin-bottom:10px}.tabs button{padding:8px 11px}.tabs button.active{background:#2b89c7;border-color:#55b5ed}
+.search{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #38566e;background:#0e1b29;color:white;outline:none}
+#blocks{padding:14px 18px 20px;overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.block{min-height:112px;border:1px solid #34536c;background:#1a2e41;border-radius:12px;padding:10px 7px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;cursor:grab;user-select:none}
+.block:hover{border-color:#67bff3;background:#203a51}.block:active{cursor:grabbing}.glyph{width:48px;height:48px;border-radius:10px;background:#d8e3ec;color:#213b50;display:grid;place-items:center;font-weight:900;font-size:14px;border:1px solid #b5c7d4;box-shadow:inset 0 0 0 3px #edf3f7}
+.block .name{font-size:12px;line-height:1.18;font-weight:700;color:#dceaf3}
+main{min-width:0;position:relative;overflow:hidden;background-color:#28618d;background-image:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px);background-size:50px 50px}
+#toolbar{position:absolute;z-index:8;left:18px;top:18px;display:flex;gap:8px;padding:9px;background:#122437e8;border:1px solid #3b5971;border-radius:13px;backdrop-filter:blur(8px)}
+#stage{position:absolute;inset:0;overflow:hidden}.node{position:absolute;width:220px;min-height:110px;background:#f1f5f8;color:#172638;border:2px solid #324b61;border-radius:16px;padding:12px 14px 12px 14px;box-shadow:0 8px 18px #00111d55;cursor:grab;z-index:3}.node.selected{outline:3px solid #f3c45e;border-color:#f5ce71}.node:active{cursor:grabbing}
+.node .x{position:absolute;right:10px;top:8px;background:none;border:0;color:#a6323f;padding:2px 6px;font-size:18px}.node-icon{width:42px;height:42px;border-radius:9px;background:#d5e1e9;border:1px solid #afc1ce;display:grid;place-items:center;font-size:12px;font-weight:900;margin-bottom:9px}.node-title{font-size:15px;font-weight:850;padding-right:25px}.node-meta{font-size:13px;color:#62788b;margin-top:8px}
+svg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}.edge{stroke:#d9ecf8;stroke-width:3;fill:none}.edge-arrow{fill:#d9ecf8}
+#empty{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#d9e9f4;background:#102237c9;border:1px solid #4c6e87;border-radius:18px;padding:22px 30px;z-index:2}.hidden{display:none}
+#menu{position:absolute;display:none;z-index:20;background:#172b3d;border:1px solid #54718a;border-radius:10px;padding:6px;min-width:160px;box-shadow:0 10px 30px #0008}#menu button{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:7px;padding:9px 10px}#menu button:hover{background:#27465e}
+.modal{position:fixed;inset:0;background:#0009;display:none;place-items:center;z-index:30}.modal.open{display:grid}.dialog{width:min(420px,90vw);background:#172a3c;border:1px solid #4d6b82;border-radius:16px;padding:20px}.dialog h3{margin-top:0}.dialog label{display:block;margin:12px 0 5px;color:#b7ccdb;font-size:13px}.dialog input,.dialog select{width:100%;padding:10px;border-radius:8px;border:1px solid #45637b;background:#0e1c2a;color:white}.dialog .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.hint{color:#9eb4c4;font-size:12px;margin-top:7px}
+@media(max-width:850px){#layout{grid-template-columns:300px 1fr}#blocks{grid-template-columns:repeat(2,minmax(0,1fr))}.logo{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<div class="logo">Create <b>Blueprint Studio</b></div>
+<button class="primary" id="newScheme">＋ Новая схема</button>
+<button id="save">💾 Сохранить</button>
+<div class="export"><button id="png">PNG</button><button id="jpg">JPEG</button></div>
+</header>
+<div id="layout">
+<aside>
+<div class="section">
+<h2>Мои схемы</h2><div id="schemes"></div>
+<div class="scheme-actions" style="margin-top:12px"><button id="rename">Переименовать</button><button class="danger" id="deleteScheme">Удалить</button></div>
+</div>
+<div class="section catalog">
+<h2>Блоки Create · каталог</h2>
+<div class="tabs"><button class="active" data-cat="all">Все</button><button data-cat="machines">Механизмы</button><button data-cat="power">Привод</button><button data-cat="logistics">Логистика</button></div>
+<input id="search" class="search" placeholder="Поиск по русскому названию…">
+<div class="hint">Перетащи блок на поле или нажми по нему.</div>
+</div>
+<div id="blocks"></div>
+</aside>
+<main>
+<div id="toolbar"><button id="branch">↳ Ветка</button><button id="center">⌗ По центру</button></div>
+<div id="stage"><svg id="edges"></svg><div id="empty">Перетащи блок из каталога<br><small>или нажми по блоку слева</small></div></div>
+<div id="menu"><button data-action="edit">✏️ Редактировать</button><button data-action="branch">↳ Создать ветку</button><button data-action="delete">🗑️ Удалить</button></div>
+</main>
+</div>
+</div>
+<div class="modal" id="modal"><div class="dialog"><h3>Редактирование блока</h3><label>Блок</label><select id="editType"></select><label>Количество</label><input id="editCount" type="number" min="1"><div class="actions"><button id="cancel">Отмена</button><button class="primary" id="apply">Применить</button></div></div></div>
+<script>
+const C=[
+["mechanical_crafter","Механический сборщик","machines"],["mechanical_arm","Механическая рука","machines"],["mechanical_drill","Механический бур","machines"],["mechanical_mixer","Механический смешиватель","machines"],["mechanical_press","Механический пресс","machines"],["mechanical_saw","Механическая пила","machines"],["mechanical_pump","Механическая помпа","machines"],["mechanical_harvester","Механический комбайн","machines"],["mechanical_plough","Механический плуг","machines"],["mechanical_roller","Механический каток","machines"],["mechanical_piston","Механический поршень","machines"],["basin","Чаша","machines"],["millstone","Жёрнов","machines"],["blaze_burner","Горелка всполоха","machines"],["encased_fan","Вентилятор в корпусе","machines"],["depot","Депо","machines"],
+["cogwheel","Шестерня","power"],["large_cogwheel","Большая шестерня","power"],["shaft","Вал","power"],["gearbox","Коробка передач","power"],["clutch","Муфта","power"],["gearshift","Реверсивная передача","power"],["sequenced_gearshift","Последовательный редуктор","power"],["hand_crank","Рукоятка","power"],["water_wheel","Водяное колесо","power"],["large_water_wheel","Большое водяное колесо","power"],["steam_engine","Паровой двигатель","power"],["windmill_bearing","Подшипник ветряной мельницы","power"],["rotation_speed_controller","Регулятор скорости","power"],
+["brass_funnel","Латунный шлюз","logistics"],["brass_tunnel","Латунный туннель","logistics"],["andesite_funnel","Андезитовый шлюз","logistics"],["andesite_tunnel","Андезитовый туннель","logistics"],["chute","Жёлоб","logistics"],["smart_chute","Умный жёлоб","logistics"],["belt","Механический ремень","logistics"],["chain_conveyor","Цепной конвейер","logistics"],["item_vault","Хранилище предметов","logistics"],["fluid_pipe","Жидкостная труба","logistics"],["smart_fluid_pipe","Умная жидкостная труба","logistics"],["spout","Дозатор","logistics"],["weighted_ejector","Весовая катапульта","logistics"]
+];
+const $=s=>document.querySelector(s), stage=$("#stage"), edges=$("#edges"), blocks=$("#blocks"), schemesEl=$("#schemes");
+let schemes=JSON.parse(localStorage.getItem("cbs_v5")||"null")||[{id:crypto.randomUUID(),name:"Новая схема",nodes:[],edges:[]}], active=0, selected=null, editing=null, cat="all";
+function save(){localStorage.setItem("cbs_v5",JSON.stringify(schemes))}
+function glyph(name){return name.split(" ").map(x=>x[0]).slice(0,2).join("")}
+function renderCatalog(){
+ let q=$("#search").value.toLowerCase();blocks.innerHTML="";
+ C.filter(x=>(cat==="all"||x[2]===cat)&&x[1].toLowerCase().includes(q)).forEach(x=>{
+  let d=document.createElement("div");d.className="block";d.draggable=true;d.dataset.id=x[0];
+  d.innerHTML=`<div class="glyph">${glyph(x[1])}</div><div class="name">${x[1]}</div>`;
+  d.ondragstart=e=>e.dataTransfer.setData("id",x[0]);
+  d.onclick=()=>add(x[0],100+Math.random()*300,100+Math.random()*200);
+  blocks.append(d);
+ });
+}
+function renderSchemes(){schemesEl.innerHTML="";schemes.forEach((s,i)=>{let b=document.createElement("button");b.className="scheme "+(i===active?"active":"");b.textContent=s.name;b.onclick=()=>{active=i;selected=null;render()};schemesEl.append(b)})}
+function current(){return schemes[active]}
+function add(id,x=200,y=200){let c=C.find(a=>a[0]===id);let n={id:crypto.randomUUID(),type:id,name:c[1],count:1,x,y};current().nodes.push(n);selected=n.id;save();render()}
+function render(){
+ renderSchemes();stage.querySelectorAll(".node").forEach(x=>x.remove());edges.innerHTML="";
+ let s=current();$("#empty").classList.toggle("hidden",s.nodes.length>0);
+ s.edges.forEach(e=>{let a=s.nodes.find(n=>n.id===e.a),b=s.nodes.find(n=>n.id===e.b);if(!a||!b)return;let x1=a.x+220,y1=a.y+55,x2=b.x,y2=b.y+55;edges.innerHTML+=`<path class="edge" d="M${x1} ${y1} C${x1+70} ${y1},${x2-70} ${y2},${x2} ${y2}"/>`});
+ s.nodes.forEach(n=>{let d=document.createElement("div");d.className="node "+(selected===n.id?"selected":"");d.dataset.id=n.id;d.style.left=n.x+"px";d.style.top=n.y+"px";d.innerHTML=`<button class="x">×</button><div class="node-icon">${glyph(n.name)}</div><div class="node-title">${n.name}</div><div class="node-meta">Количество: ${n.count}</div>`;
+ d.querySelector(".x").onclick=e=>{e.stopPropagation();removeNode(n.id)};d.onclick=e=>{e.stopPropagation();selected=n.id;render()};
+ d.oncontextmenu=e=>{e.preventDefault();selected=n.id;openMenu(e.clientX,e.clientY);render()};
+ dragNode(d,n);stage.append(d)})
+}
+function dragNode(el,n){let ox,oy,drag=false;el.onpointerdown=e=>{if(e.target.closest(".x"))return;ox=e.clientX-n.x;oy=e.clientY-n.y;drag=true;el.setPointerCapture(e.pointerId)};el.onpointermove=e=>{if(!drag)return;n.x=Math.max(0,e.clientX-ox);n.y=Math.max(0,e.clientY-oy);render()};el.onpointerup=()=>{drag=false;save()}}
+stage.ondragover=e=>e.preventDefault();stage.ondrop=e=>{e.preventDefault();let id=e.dataTransfer.getData("id"),r=stage.getBoundingClientRect();if(id)add(id,e.clientX-r.left-110,e.clientY-r.top-55)}
+function removeNode(id){let s=current();s.nodes=s.nodes.filter(n=>n.id!==id);s.edges=s.edges.filter(e=>e.a!==id&&e.b!==id);if(selected===id)selected=null;save();render()}
+$("#branch").onclick=()=>makeBranch();function makeBranch(){if(!selected)return alert("Сначала выбери блок.");let n=current().nodes.find(x=>x.id===selected);let c=C[0];let nn={id:crypto.randomUUID(),type:c[0],name:c[1],count:1,x:n.x+300,y:n.y};current().nodes.push(nn);current().edges.push({a:n.id,b:nn.id});selected=nn.id;save();render()}
+$("#center").onclick=()=>{let ns=current().nodes;if(!ns.length)return;let minX=Math.min(...ns.map(n=>n.x)),minY=Math.min(...ns.map(n=>n.y));ns.forEach(n=>{n.x=n.x-minX+180;n.y=n.y-minY+140});save();render()}
+function openMenu(x,y){let m=$("#menu");m.style.display="block";m.style.left=Math.min(x,innerWidth-180)+"px";m.style.top=Math.min(y,innerHeight-160)+"px"}document.addEventListener("click",()=>$("#menu").style.display="none");
+$("#menu").onclick=e=>{let a=e.target.dataset.action;if(!a)return;if(a==="delete")removeNode(selected);if(a==="branch")makeBranch();if(a==="edit")openEdit(selected);$("#menu").style.display="none"}
+function openEdit(id){editing=current().nodes.find(n=>n.id===id);$("#editType").innerHTML=C.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("");$("#editType").value=editing.type;$("#editCount").value=editing.count;$("#modal").classList.add("open")}
+$("#cancel").onclick=()=>$("#modal").classList.remove("open");$("#apply").onclick=()=>{let c=C.find(x=>x[0]===$("#editType").value);editing.type=c[0];editing.name=c[1];editing.count=Math.max(1,+$("#editCount").value||1);save();$("#modal").classList.remove("open");render()}
+$("#newScheme").onclick=()=>{let name=prompt("Название новой схемы","Новая схема");if(name===null)return;schemes.push({id:crypto.randomUUID(),name:name||"Новая схема",nodes:[],edges:[]});active=schemes.length-1;save();render()}
+$("#rename").onclick=()=>{let n=prompt("Новое название",current().name);if(n){current().name=n;save();render()}}
+$("#deleteScheme").onclick=()=>{if(schemes.length===1)return alert("Нельзя удалить последнюю схему.");if(confirm("Удалить схему?")){schemes.splice(active,1);active=0;save();render()}}
+$("#save").onclick=()=>{save();alert("Схема сохранена в браузере.")}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{cat=b.dataset.cat;document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b));renderCatalog()});$("#search").oninput=renderCatalog;
+function exportImage(type){let r=stage.getBoundingClientRect(),can=document.createElement("canvas");can.width=r.width;can.height=r.height;let ctx=can.getContext("2d");ctx.fillStyle="#28618d";ctx.fillRect(0,0,can.width,can.height);ctx.strokeStyle="rgba(255,255,255,.22)";for(let x=0;x<can.width;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,can.height);ctx.stroke()}for(let y=0;y<can.height;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(can.width,y);ctx.stroke()}current().edges.forEach(e=>{let a=current().nodes.find(n=>n.id===e.a),b=current().nodes.find(n=>n.id===e.b);if(!a||!b)return;ctx.strokeStyle="#eaf5fc";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(a.x+220,a.y+55);ctx.lineTo(b.x,b.y+55);ctx.stroke()});current().nodes.forEach(n=>{ctx.fillStyle="#f1f5f8";ctx.strokeStyle="#324b61";ctx.lineWidth=2;ctx.fillRect(n.x,n.y,220,110);ctx.strokeRect(n.x,n.y,220,110);ctx.fillStyle="#172638";ctx.font="bold 16px Arial";ctx.fillText(n.name,n.x+14,n.y+70);ctx.font="14px Arial";ctx.fillStyle="#62788b";ctx.fillText("Количество: "+n.count,n.x+14,n.y+95)});let a=document.createElement("a");a.download=current().name+"."+type;a.href=can.toDataURL("image/"+(type==="jpg"?"jpeg":"png"));a.click()}
+$("#png").onclick=()=>exportImage("png");$("#jpg").onclick=()=>exportImage("jpg");
+renderCatalog();render();
+</script>
+</body></html>
