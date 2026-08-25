@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Create Blueprint Studio</title>
+<style>
+:root{--panel:#102238;--panel2:#172d46;--line:#31506d;--text:#eaf4ff;--muted:#9fb4c9;--accent:#59b7ff;--danger:#ff6678}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial;background:#0a1625;color:var(--text);overflow:hidden}
+.app{height:100vh;display:grid;grid-template-columns:250px 1fr 285px;grid-template-rows:58px 1fr}
+header{grid-column:1/4;background:#0d1c2d;border-bottom:1px solid #28445f;display:flex;align-items:center;padding:0 16px;gap:12px}
+.logo{font-weight:800;letter-spacing:.4px}.logo span{color:var(--accent)}
+button{border:1px solid #355571;background:#17304a;color:var(--text);border-radius:8px;padding:8px 11px;cursor:pointer}
+button:hover{background:#21425f}.primary{background:#1687d9;border-color:#39a7f0}.danger{background:#4a1e2a;border-color:#813444}
+.sidebar,.right{background:var(--panel);padding:14px;overflow:auto}.sidebar{border-right:1px solid #28445f}.right{border-left:1px solid #28445f}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:#a9c4dc;margin:7px 0 10px}
+.search{width:100%;background:#0b1a2a;border:1px solid #355571;color:white;border-radius:8px;padding:9px}
+.blocks{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.block{background:#142b43;padding:10px 7px;border-radius:9px;border:1px solid #2d4b65;font-size:12px;text-align:center;cursor:grab}
+.icon{font-size:24px;display:flex;align-items:center;justify-content:center;margin-bottom:4px;height:34px;position:relative}.icon img{width:34px;height:34px;image-rendering:pixelated;object-fit:contain}.fallback{display:none;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #8aa1b5;border-radius:5px;background:#d7e5f0;color:#1c3850;font-size:9px;font-weight:800}.block .icon{height:42px}.block .icon img{width:42px;height:42px}.hint{font-size:12px;color:var(--muted);line-height:1.45}
+main{position:relative;overflow:hidden;background-color:#23679a;background-image:linear-gradient(rgba(255,255,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.18) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:80px 80px,80px 80px,20px 20px,20px 20px}
+.canvas{position:absolute;inset:0;transform-origin:0 0}.toolbar{position:absolute;top:12px;left:12px;z-index:10;background:#0d1c2ddd;padding:7px;border:1px solid #365a78;border-radius:10px;display:flex;gap:6px}
+.node{position:absolute;width:150px;min-height:74px;background:#eaf4ff;color:#102238;border:2px solid #14334e;border-radius:12px;box-shadow:0 8px 24px #06223a66;padding:9px;cursor:pointer;user-select:none}
+.node.selected{outline:3px solid #ffd45a}.node .name{font-weight:800;font-size:12px}.node .count{font-size:11px;color:#4a647c;margin-top:4px}.node .remove{position:absolute;right:5px;top:3px;border:0;background:none;color:#9b2638;padding:1px 4px}
+svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}.edge{stroke:#f7ffff;stroke-width:3;fill:none;filter:drop-shadow(0 1px 1px #17415e)}.edge.dashed{stroke-dasharray:7 6}
+.tabs{display:flex;gap:6px;overflow:auto;margin-bottom:12px}.tab{white-space:nowrap}.tab.active{background:#258ed4}
+.row{display:flex;gap:7px}.row>*{flex:1}.field{margin:8px 0}.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}.field input,.field select{width:100%;background:#0b1a2a;color:#fff;border:1px solid #355571;border-radius:7px;padding:8px}
+.empty{color:#89a1b7;text-align:center;padding:35px 5px;font-size:13px}
+@media(max-width:900px){.app{grid-template-columns:190px 1fr}.right{display:none}}
+.block{user-select:none}.stage-drop{outline:3px dashed #fff}\n
+/* v3 drag UX */
+.block{cursor:grab}.block:active{cursor:grabbing}
+#stage.drag-over{outline:4px solid rgba(255,255,255,.65);outline-offset:-4px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">Create <span>Blueprint Studio</span></div>
+  <button class="primary" id="newBtn">＋ Новая схема</button>
+  <button id="saveBtn">💾 Сохранить</button>
+  <button id="pngBtn">PNG</button><button id="jpgBtn">JPEG</button>
+  <div style="margin-left:auto;color:#9fb4c9;font-size:12px">ЛКМ — выбрать • ПКМ — удалить/редактировать</div>
+</header>
+
+<aside class="sidebar">
+  <h3>Мои схемы</h3><div class="tabs" id="tabs"></div>
+  <div class="row"><button id="renameBtn">Переименовать</button><button class="danger" id="deleteScheme">Удалить</button></div>
+  <h3>Блоки Create · каталог</h3><div class="hint">Названия на русском. Иконки — текстуры Create.</div>
+  <div class="row" style="margin:8px 0"><button id="allCat">Все</button><button id="machineCat">Механизмы</button><button id="logisticsCat">Логистика</button></div><input class="search" id="search" placeholder="Поиск по русскому названию...">
+  <div class="blocks" id="blocks"></div>
+  <p class="hint">Перетащите блок на чертёж. После добавления его можно перемещать. Соединяйте узлы кнопкой «Ветка».</p>
+</aside>
+
+<main id="stage">
+  <div class="toolbar">
+    <button id="branchBtn">↳ Ветка</button><button id="fitBtn">⛶ По центру</button>
+  </div>
+  <svg id="edges"></svg><div class="canvas" id="canvas"></div>
+</main>
+
+<aside class="right">
+  <h3>Свойства предмета</h3><div id="props" class="empty">Выберите блок ЛКМ</div>
+  <hr style="border-color:#28445f;border-width:1px 0 0;margin:18px 0">
+  <h3>Управление</h3>
+  <div class="hint">ПКМ по блоку открывает контекстное меню: редактирование, замена и удаление. Для связи выберите источник, нажмите «Ветка», затем цель.</div>
+</aside>
+</div>
+
+<script>
+const catalog=[
+["mechanical_crafter","Механический сборщик","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_crafter.png"],
+["mechanical_arm","Механическая рука","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_arm.png"],
+["mechanical_bearing","Механический вращатель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_bearing.png"],
+["mechanical_drill","Механический бур","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_drill.png"],
+["mechanical_harvester","Механический комбайн","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_harvester.png"],
+["mechanical_mixer","Механический смешиватель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_mixer.png"],
+["mechanical_plough","Механический плуг","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_plough.png"],
+["mechanical_piston","Механический поршень","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_piston.png"],
+["mechanical_press","Механический пресс","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_press.png"],
+["mechanical_pump","Механическая помпа","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_pump.png"],
+["mechanical_roller","Механический каток","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_roller.png"],
+["mechanical_saw","Механическая пила","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mechanical_saw.png"],
+["steam_engine","Паровой двигатель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/steam_engine.png"],
+["steam_whistle","Паровой свисток","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/steam_whistle.png"],
+["steam_whistle_extension","Удлинитель парового свистка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/steam_whistle_extension.png"],
+["blaze_burner","Горелка всполоха","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/blaze_burner.png"],
+["encased_fan","Вентилятор в корпусе","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/encased_fan.png"],
+["nozzle","Форсунка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/nozzle.png"],
+["hose_pulley","Шланговая катушка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/hose_pulley.png"],
+["spout","Дозатор","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/spout.png"],
+["millstone","Жёрнов","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/millstone.png"],
+["basin","Чаша","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/basin.png"],
+["depot","Депо","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/depot.png"],
+["item_vault","Хранилище предметов","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/item_vault.png"],
+["chute","Жёлоб","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/chute.png"],
+["smart_chute","Умный жёлоб","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/smart_chute.png"],
+["brass_funnel","Латунный шлюз","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_funnel.png"],
+["brass_tunnel","Латунный туннель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_tunnel.png"],
+["andesite_funnel","Андезитовый шлюз","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_funnel.png"],
+["andesite_tunnel","Андезитовый туннель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_tunnel.png"],
+["belt","Ремень","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/belt.png"],
+["chain_conveyor","Цепной конвейер","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/chain_conveyor.png"],
+["weighted_ejector","Весовая катапульта","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/weighted_ejector.png"],
+["redstone_link","Редстоуновый передатчик сигнала","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/redstone_link.png"],
+["redstone_contact","Редстоуновый контакт","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/redstone_contact.png"],
+["redstone_requester","Редстоуновый запрашиватель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/redstone_requester.png"],
+["stock_link","Складской передатчик","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/stock_link.png"],
+["stock_ticker","Складской тикер","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/stock_ticker.png"],
+["stockpile_switch","Пороговый переключатель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/stockpile_switch.png"],
+["rotation_speed_controller","Регулятор скорости вращения","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/rotation_speed_controller.png"],
+["speedometer","Спидометр","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/speedometer.png"],
+["stressometer","Стрессометр","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/stressometer.png"],
+["hand_crank","Рукоятка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/hand_crank.png"],
+["clutch","Муфта","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/clutch.png"],
+["gearshift","Реверсивная передача","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/gearshift.png"],
+["sequenced_gearshift","Последовательный редуктор","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/sequenced_gearshift.png"],
+["gearbox","Коробка передач","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/gearbox.png"],
+["shaft","Вал","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/shaft.png"],
+["cogwheel","Шестерня","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/cogwheel.png"],
+["large_cogwheel","Большая шестерня","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/large_cogwheel.png"],
+["brass_encased_cogwheel","Шестерня в латунном корпусе","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_encased_cogwheel.png"],
+["brass_encased_large_cogwheel","Большая шестерня в латунном корпусе","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_encased_large_cogwheel.png"],
+["brass_encased_shaft","Вал в латунном корпусе","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_encased_shaft.png"],
+["metal_girder","Металлическая балка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/metal_girder.png"],
+["metal_girder_encased_shaft","Вал в металлической балке","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/metal_girder_encased_shaft.png"],
+["wooden_bracket","Деревянная скоба","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/wooden_bracket.png"],
+["metal_bracket","Металлическая скоба","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/metal_bracket.png"],
+["andesite_casing","Андезитовый корпус","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_casing.png"],
+["brass_casing","Латунный корпус","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_casing.png"],
+["copper_casing","Медный корпус","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/copper_casing.png"],
+["refined_radiance_casing","Сияющий корпус","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/refined_radiance_casing.png"],
+["shadow_steel_casing","Теневой корпус","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/shadow_steel_casing.png"],
+["industrial_iron_block","Блок промышленного железа","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/industrial_iron_block.png"],
+["zinc_block","Цинковый блок","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/zinc_block.png"],
+["brass_block","Латунный блок","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_block.png"],
+["copper_backtank","Медный баллон","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/copper_backtank.png"],
+["netherite_backtank","Незеритовый баллон","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/netherite_backtank.png"],
+["rope_pulley","Верёвочная лебёдка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/rope_pulley.png"],
+["sticker","Блок-липучка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/sticker.png"],
+["sticky_mechanical_piston","Липкий механический поршень","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/sticky_mechanical_piston.png"],
+["windmill_bearing","Подшипник ветряной мельницы","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/windmill_bearing.png"],
+["large_water_wheel","Большое водяное колесо","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/large_water_wheel.png"],
+["water_wheel","Водяное колесо","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/water_wheel.png"],
+["cart_assembler","Вагонеточный сборщик","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/cart_assembler.png"],
+["minecart_anchor","Вагонеточная опора","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/minecart_anchor.png"],
+["small_bogey","Малоколёсная вагонная тележка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/small_bogey.png"],
+["large_bogey","Крупноколёсная вагонная тележка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/large_bogey.png"],
+["lectern_controller","Контроллер на кафедре","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/lectern_controller.png"],
+["copycat_bars","Заполняемые прутья","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/copycat_bars.png"],
+["rope","Верёвка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/rope.png"],
+["clip_board","Планшет","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/clip_board.png"],
+["repackager","Переупаковщик","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/repackager.png"],
+["haunted_bell","Призрачный колокол","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/haunted_bell.png"],
+["mysterious_cuckoo_clock","Странные часы с кукушкой","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mysterious_cuckoo_clock.png"],
+["nixie_tube","Газоразрядный индикатор","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/nixie_tube.png"],
+["rose_quartz_lamp","Розовокварцевый фонарь","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/rose_quartz_lamp.png"],
+["tiled_glass","Плиточное стекло","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/tiled_glass.png"],
+["tiled_glass_pane","Плиточная стеклянная панель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/tiled_glass_pane.png"],
+["glass_fluid_pipe","Застеклённая жидкостная труба","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/glass_fluid_pipe.png"],
+["smart_fluid_pipe","Умная жидкостная труба","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/smart_fluid_pipe.png"],
+["fluid_pipe","Жидкостная труба","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/fluid_pipe.png"],
+["fluid_valve","Клапан жидкости","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/fluid_valve.png"],
+["spout","Дозатор","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/spout.png"],
+["filter","Фильтр","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/filter.png"],
+["attribute_filter","Фильтр атрибутов","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/attribute_filter.png"],
+["brass_tunnel","Латунный туннель","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_tunnel.png"],
+["portable_storage_interface","Портативный интерфейс хранения","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/portable_storage_interface.png"],
+["display_board","Доска отображения","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/display_board.png"],
+["display_link","Ссылка отображения","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/display_link.png"],
+["factory_gauge","Производственный манометр","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/factory_gauge.png"],
+["display_source","Источник отображения","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/display_source.png"],
+["peculiar_bell","Причудливый колокол","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/peculiar_bell.png"],
+["precision_mechanism","Прецизионный механизм","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/precision_mechanism.png"],
+["electron_tube","Электронная трубка","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/electron_tube.png"],
+["brass_hand","Латунная рука","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_hand.png"],
+["andesite_alloy","Андезитовый сплав","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_alloy.png"],
+["rose_quartz_block","Блок розового кварца","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/rose_quartz_block.png"],
+["rose_quartz_tiles","Плитка из розового кварца","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/rose_quartz_tiles.png"],
+["small_rose_quartz_tiles","Мелкая плитка из розового кварца","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/small_rose_quartz_tiles.png"],
+["cardboard_block","Блок картона","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/cardboard_block.png"],
+["cardboard_package_12","Упаковка картона","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/cardboard_package_12.png"],
+["chocolate","Шоколад","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/chocolate.png"],
+["honey","Мёд","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/honey.png"],
+["andesite_ladder","Андезитовая лестница","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_ladder.png"],
+["brass_ladder","Латунная лестница","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_ladder.png"],
+["copper_ladder","Медная лестница","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/copper_ladder.png"],
+["andesite_scaffolding","Андезитовые подмостки","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_scaffolding.png"],
+["brass_scaffolding","Латунные подмостки","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/brass_scaffolding.png"],
+["copper_scaffolding","Медные подмостки","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/copper_scaffolding.png"],
+["oak_window","Дубовое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/oak_window.png"],
+["spruce_window","Еловое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/spruce_window.png"],
+["birch_window","Берёзовое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/birch_window.png"],
+["jungle_window","Окно из тропического дерева","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/jungle_window.png"],
+["acacia_window","Акациевое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/acacia_window.png"],
+["dark_oak_window","Окно из тёмного дуба","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/dark_oak_window.png"],
+["mangrove_window","Мангровое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/mangrove_window.png"],
+["cherry_window","Вишнёвое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/cherry_window.png"],
+["bamboo_window","Бамбуковое окно","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/bamboo_window.png"],
+["calcite_pillar","Кальцитовая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/calcite_pillar.png"],
+["granite_pillar","Гранитная колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/granite_pillar.png"],
+["deepslate_pillar","Глубинносланцевая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/deepslate_pillar.png"],
+["asurine_pillar","Азуриновая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/asurine_pillar.png"],
+["ochrum_pillar","Охрумовая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/ochrum_pillar.png"],
+["andesite_pillar","Андезитовая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/andesite_pillar.png"],
+["veridium_pillar","Веридиевая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/veridium_pillar.png"],
+["crimsite_pillar","Кримзитовая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/crimsite_pillar.png"],
+["scorchia_pillar","Тёмнопепловая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/scorchia_pillar.png"],
+["scoria_pillar","Пепловая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/scoria_pillar.png"],
+["tuff_pillar","Туфовая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/tuff_pillar.png"],
+["limestone_pillar","Известняковая колонна","https://github.com/Creators-of-Create/Create/raw/refs/heads/mc1.21.1/dev/src/main/resources/assets/create/textures/block/limestone_pillar.png"]
+];
+let schemes=JSON.parse(localStorage.getItem("createBlueprints")||"null")||[
+{name:"Новая схема",nodes:[],edges:[]}
+], active=0, selected=null, branchMode=false;
+const $=id=>document.getElementById(id), canvas=$("canvas"), stage=$("stage"), edges=$("edges");
+
+function persist(){localStorage.setItem("createBlueprints",JSON.stringify(schemes))}
+function renderTabs(){ $("tabs").innerHTML=""; schemes.forEach((s,i)=>{let b=document.createElement("button");b.className="tab "+(i===active?"active":"");b.textContent=s.name;b.onclick=()=>{active=i;selected=null;branchMode=false;render()};$("tabs").append(b)})}
+function renderBlocks(filter="",cat="all"){let q=filter.toLowerCase();$("blocks").innerHTML="";catalog.filter(x=>x[1].toLowerCase().includes(q)).forEach(x=>{let d=document.createElement("div");d.className="block";d.draggable=true;d.dataset.block=JSON.stringify(x);d.style.touchAction="none";d.innerHTML=`<span class="icon"><img src="${x[2]}" alt="${x[1]}"><span class="fallback">${x[1].slice(0,2)}</span></span>${x[1]}`;
+d.querySelector("img").onerror=()=>{d.querySelector("img").style.display="none";d.querySelector(".fallback").style.display="grid"};d.ondragstart=e=>{e.dataTransfer.effectAllowed="copy";e.dataTransfer.setData("block",JSON.stringify(x));};$("blocks").append(d)})}
+function nodeEl(n){let d=document.createElement("div");d.className="node "+(n.id===selected?"selected":"");d.style.left=n.x+"px";d.style.top=n.y+"px";d.innerHTML=`<button class="remove">×</button><div class="icon"><img src="${n.img||""}" alt="${n.name}"><span class="fallback">${n.name.slice(0,2)}</span></div><div class="name">${n.name}</div><div class="count">Количество: ${n.count}</div>`;
+const ni=d.querySelector(".icon img"); const nf=d.querySelector(".fallback");
+if(ni){ni.onload=()=>{nf.style.display="none"};ni.onerror=()=>{ni.style.display="none";nf.style.display="grid"}}
+d.onclick=e=>{e.stopPropagation(); if(branchMode&&selected&&selected!==n.id){schemes[active].edges.push({a:selected,b:n.id});branchMode=false;persist();render()}else{selected=n.id;showProps();render()}};
+d.oncontextmenu=e=>{e.preventDefault();selected=n.id;showProps();render()};
+d.onmousedown=e=>{if(e.button!==0)return; let sx=e.clientX,sy=e.clientY,ox=n.x,oy=n.y;function mv(ev){n.x=ox+ev.clientX-sx;n.y=oy+ev.clientY-sy;d.style.left=n.x+"px";d.style.top=n.y+"px";drawEdges()}function up(){document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);persist()}document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up)};
+d.querySelector(".remove").onclick=e=>{e.stopPropagation();deleteNode(n.id)};return d}
+function deleteNode(id){let s=schemes[active];s.nodes=s.nodes.filter(n=>n.id!==id);s.edges=s.edges.filter(e=>e.a!==id&&e.b!==id);selected=null;persist();render()}
+function drawEdges(){edges.innerHTML="";let s=schemes[active];s.edges.forEach(e=>{let a=s.nodes.find(n=>n.id===e.a),b=s.nodes.find(n=>n.id===e.b);if(!a||!b)return;let x1=a.x+75,y1=a.y+37,x2=b.x+75,y2=b.y+37;let p=document.createElementNS("http://www.w3.org/2000/svg","path");p.setAttribute("d",`M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`);p.setAttribute("class","edge");edges.append(p)})}
+function render(){renderTabs();canvas.innerHTML="";schemes[active].nodes.forEach(n=>canvas.append(nodeEl(n)));drawEdges();showProps()}
+function showProps(){let n=schemes[active].nodes.find(n=>n.id===selected);if(!n){$("props").className="empty";$("props").textContent="Выберите блок ЛКМ";return}$("props").className="";$("props").innerHTML=`<div class="field"><label>Название</label><input id="pname" value="${n.name}"></div><div class="field"><label>Количество</label><input id="pcount" type="number" min="1" value="${n.count}"></div><div class="field"><label>Заменить на</label><select id="ptype">${catalog.map(x=>`<option ${x[1]===n.name?"selected":""} value="${x[1]}">${x[0]} ${x[1]}</option>`).join("")}</select></div><div class="row"><button id="apply">Применить</button><button class="danger" id="del">Удалить</button></div>`;
+$("apply").onclick=()=>{n.name=$("pname").value;n.count=Math.max(1,+$("pcount").value||1);let c=catalog.find(x=>x[1]===$("ptype").value);n.icon=c?c[0]:n.icon;n.img=c?c[2]:n.img;persist();render()};$("del").onclick=()=>deleteNode(n.id)}
+stage.ondragenter=e=>e.preventDefault();
+stage.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect="copy"};
+stage.ondrop=e=>{e.preventDefault();let raw=e.dataTransfer.getData("block");if(!raw)return;let [icon,name,img]=JSON.parse(raw),r=stage.getBoundingClientRect();schemes[active].nodes.push({id:crypto.randomUUID(),icon,name,img,count:1,x:e.clientX-r.left-75,y:e.clientY-r.top-37});persist();render()};
+let activeCat="all";
+$("search").oninput=e=>renderBlocks(e.target.value,activeCat);
+$("allCat").onclick=()=>{activeCat="all";renderBlocks($("search").value,activeCat)};
+$("machineCat").onclick=()=>{activeCat="machines";renderBlocks($("search").value,activeCat)};
+$("logisticsCat").onclick=()=>{activeCat="logistics";renderBlocks($("search").value,activeCat)};
+$("branchBtn").onclick=()=>{if(!selected){alert("Сначала выберите исходный блок.");return}branchMode=!branchMode;$("branchBtn").textContent=branchMode?"↳ Выберите цель":"↳ Ветка"};
+$("newBtn").onclick=()=>{schemes.push({name:"Новая схема "+(schemes.length+1),nodes:[],edges:[]});active=schemes.length-1;selected=null;persist();render()};
+$("renameBtn").onclick=()=>{let x=prompt("Название схемы:",schemes[active].name);if(x){schemes[active].name=x;persist();render()}};
+$("deleteScheme").onclick=()=>{if(schemes.length===1){alert("Нельзя удалить последнюю схему.");return}if(confirm("Удалить текущую схему?")){schemes.splice(active,1);active=Math.max(0,active-1);persist();render()}};
+$("saveBtn").onclick=()=>{persist();alert("Схема сохранена в браузере.")};
+$("fitBtn").onclick=()=>{if(!schemes[active].nodes.length)return;let xs=schemes[active].nodes.map(n=>n.x),ys=schemes[active].nodes.map(n=>n.y);let dx=(stage.clientWidth-(Math.max(...xs)-Math.min(...xs)+180))/2-Math.min(...xs);let dy=(stage.clientHeight-(Math.max(...ys)-Math.min(...ys)+110))/2-Math.min(...ys);schemes[active].nodes.forEach(n=>{n.x+=dx;n.y+=dy});persist();render()};
+function exportImage(type){let s=schemes[active], W=stage.clientWidth,H=stage.clientHeight,scale=2,c=document.createElement("canvas");c.width=W*scale;c.height=H*scale;let x=c.getContext("2d");x.scale(scale,scale);x.fillStyle="#23679a";x.fillRect(0,0,W,H);x.strokeStyle="rgba(255,255,255,.18)";for(let i=0;i<W;i+=80){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke()}for(let j=0;j<H;j+=80){x.beginPath();x.moveTo(0,j);x.lineTo(W,j);x.stroke()}s.edges.forEach(e=>{let a=s.nodes.find(n=>n.id===e.a),b=s.nodes.find(n=>n.id===e.b);if(!a||!b)return;x.strokeStyle="#fff";x.lineWidth=3;x.beginPath();x.moveTo(a.x+75,a.y+37);x.bezierCurveTo((a.x+b.x)/2+75,a.y+37,(a.x+b.x)/2+75,b.y+37,b.x+75,b.y+37);x.stroke()});s.nodes.forEach(n=>{x.fillStyle="#eaf4ff";x.strokeStyle="#14334e";x.lineWidth=2;let r=10;x.beginPath();x.roundRect(n.x,n.y,150,74,r);x.fill();x.stroke();x.fillStyle="#102238";x.font="bold 12px Arial";x.fillText(n.icon+" "+n.name,n.x+10,n.y+25);x.font="11px Arial";x.fillText("Количество: "+n.count,n.x+10,n.y+47)});let a=document.createElement("a");a.download=(s.name||"blueprint")+"."+type;a.href=c.toDataURL(type==="jpeg"?"image/jpeg":"image/png",.95);a.click()}
+$("pngBtn").onclick=()=>exportImage("png");$("jpgBtn").onclick=()=>exportImage("jpeg");
+// Migrate old nodes: if a node has a matching Russian catalog item, attach its real texture URL.
+schemes.forEach(sc=>sc.nodes.forEach(n=>{let c=catalog.find(x=>x[1]===n.name);if(c){n.img=c[2];n.icon=c[0]}}));
+persist();
+
+document.addEventListener("pointerdown", e=>{
+  const b=e.target.closest(".block");
+  if(!b || e.button!==0) return;
+  pointerDrag={raw:b.dataset.block, startX:e.clientX, startY:e.clientY, active:false};
+});
+document.addEventListener("pointermove", e=>{
+  if(!pointerDrag)return;
+  if(Math.hypot(e.clientX-pointerDrag.startX,e.clientY-pointerDrag.startY)>5) pointerDrag.active=true;
+  if(pointerDrag.active){
+    const r=stage.getBoundingClientRect();
+    const inside=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+    stage.classList.toggle("drag-over",inside);
+  }
+});
+document.addEventListener("pointerup", e=>{
+  if(!pointerDrag)return;
+  const pd=pointerDrag; pointerDrag=null; stage.classList.remove("drag-over");
+  if(!pd.active)return;
+  const r=stage.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
+  const [icon,name,img]=JSON.parse(pd.raw);
+  schemes[active].nodes.push({id:crypto.randomUUID(),icon,name,img,count:1,x:e.clientX-r.left-75,y:e.clientY-r.top-37});
+  persist();render();
+});
+
+renderBlocks();render();
+</script>
+</body>
+</html>
